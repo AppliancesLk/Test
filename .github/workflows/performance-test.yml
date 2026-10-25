@@ -1,0 +1,68 @@
+name: Performance tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target environment
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: https://appliances-api-dev.graysky-2e2a33e6.centralindia.azurecontainerapps.io
+
+jobs:
+  k6:
+    name: k6 performance suite
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run smoke test
+        env:
+          TEST_USER_EMAIL: ${{ secrets.PERF_TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.PERF_TEST_USER_PASSWORD }}
+        run: k6 run performance/scenarios/smoke.js
+
+      - name: Run baseline
+        env:
+          TEST_USER_EMAIL: ${{ secrets.PERF_TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.PERF_TEST_USER_PASSWORD }}
+        run: k6 run performance/scenarios/baseline.js
+
+      - name: Run 10-user load
+        env:
+          TEST_USER_EMAIL: ${{ secrets.PERF_TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.PERF_TEST_USER_PASSWORD }}
+        run: k6 run performance/scenarios/load-10.js
+
+      - name: Run 25-user load
+        env:
+          TEST_USER_EMAIL: ${{ secrets.PERF_TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.PERF_TEST_USER_PASSWORD }}
+        run: k6 run performance/scenarios/load-25.js
+
+      - name: Run 50-user load
+        env:
+          TEST_USER_EMAIL: ${{ secrets.PERF_TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.PERF_TEST_USER_PASSWORD }}
+        run: k6 run performance/scenarios/load-50.js
+
+      - name: Upload performance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: applianceslk-performance-results
+          path: performance/results/
+          if-no-files-found: warn
